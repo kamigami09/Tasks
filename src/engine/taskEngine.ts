@@ -24,6 +24,14 @@ export const taskEngine = {
                     updatedAt: currentDateIso
                 };
                 modified = true;
+
+                // Trigger native browser notification
+                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                    new Notification('Task Overdue', {
+                        body: `Your task "${task.title}" is now overdue!`,
+                        icon: '/vite.svg'
+                    });
+                }
             }
         }
 

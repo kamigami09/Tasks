@@ -1,103 +1,99 @@
 import { create } from 'zustand';
 import { Task } from '../types';
-import { storageService } from '../services/storageService';
+import { apiService } from '../services/apiService';
 import { taskEngine } from '../engine/taskEngine';
 
 interface TaskState {
     tasks: Task[];
-    initialize: () => void;
-    addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
-    updateTask: (id: string, updates: Partial<Task>) => void;
-    deleteTask: (id: string) => void;
-    completeTask: (id: string) => void;
-    rescheduleTask: (id: string, newDate: string) => void;
+    kimiApiKey: string;
+    initialize: () => Promise<void>;
+    setKimiApiKey: (key: string) => void;
+    addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => Promise<void>;
+    updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+    deleteTask: (id: string) => Promise<void>;
+    completeTask: (id: string) => Promise<void>;
+    rescheduleTask: (id: string, newDate: string) => Promise<void>;
+    reorderTasks: (activeId: string, overId: string) => Promise<void>;
 }
 
-export const useTaskStore = create<TaskState>((set) => ({
+export const useTaskStore = create<TaskState>((set, get) => ({
     tasks: [],
+    kimiApiKey: localStorage.getItem('task_kimi_api_key') || '',
 
-    initialize: () => {
-        const loaded = storageService.loadTasks();
-        const synced = taskEngine.syncState(loaded, new Date().toISOString());
-        set({ tasks: synced });
+    initialize: async () => {
+        try {
+            const loaded = await apiService.fetchTasks();
+            const synced = taskEngine.syncState(loaded, new Date().toISOString());
+            set({ tasks: synced });
 
-        // Only write to localStorage if syncState structurally modified the data
-        if (loaded !== synced) {
-            storageService.saveTasks(synced);
+            // Sync engine triggers mutations for overdue locally, but not permanently unless triggered via updates.
+            // In a full prod app we would batch update these to the backend if syncing mutated them.
+        } catch (e) {
+            console.error("Failed to load cloud tasks");
         }
     },
 
-    addTask: (taskData) => {
-        const now = new Date().toISOString();
-        const newTask: Task = {
-            ...taskData,
-            id: crypto.randomUUID(),
-            createdAt: now,
-            updatedAt: now,
-        };
-
-        set((state) => {
-            let nextTasks = [...state.tasks, newTask];
-            nextTasks = taskEngine.syncState(nextTasks, now);
-            return { tasks: nextTasks };
-        });
+    setKimiApiKey: (key) => {
+        localStorage.setItem('task_kimi_api_key', key);
+        set({ kimiApiKey: key });
     },
 
-    updateTask: (id, updates) => {
-        const now = new Date().toISOString();
-        set((state) => {
-            let nextTasks = state.tasks.map(t =>
-                t.id === id ? { ...t, ...updates, updatedAt: now } : t
-            );
-            nextTasks = taskEngine.syncState(nextTasks, now);
-            return { tasks: nextTasks };
-        });
+    addTask: async (taskData) => {
+        try {
+            const created = await apiService.createTask(taskData);
+            set((state) => ({ tasks: [...state.tasks, created] }));
+        } catch (e) {
+            console.error("Failed to create task", e);
+        }
     },
 
-    deleteTask: (id) => {
-        const now = new Date().toISOString();
-        set((state) => {
-            let nextTasks = state.tasks.filter(t => t.id !== id);
-            nextTasks = taskEngine.syncState(nextTasks, now);
-            return { tasks: nextTasks };
-        });
+    updateTask: async (id, updates) => {
+        try {
+            const updated = await apiService.updateTask(id, updates);
+            set((state) => ({
+                tasks: state.tasks.map(t => t.id === id ? { ...t, ...updated } : t)
+            }));
+        } catch (e) {
+            console.error("Failed to update task", e);
+        }
     },
 
-    completeTask: (id) => {
-        const now = new Date().toISOString();
-        set((state) => {
-            let nextTasks = state.tasks.map(t =>
-                t.id === id ? { ...t, status: 'completed' as const, completedAt: now, updatedAt: now } : t
-            );
-            nextTasks = taskEngine.syncState(nextTasks, now);
-            return { tasks: nextTasks };
-        });
+    deleteTask: async (id) => {
+        try {
+            await apiService.deleteTask(id);
+            set((state) => ({ tasks: state.tasks.filter(t => t.id !== id) }));
+        } catch (e) {
+            console.error("Failed to delete task", e);
+        }
     },
 
-    rescheduleTask: (id, newDate) => {
-        const now = new Date().toISOString();
+    completeTask: async (id) => {
+        const store = get();
+        await store.updateTask(id, { status: 'completed' });
+    },
+
+    rescheduleTask: async (id, newDate) => {
+        const store = get();
+        await store.updateTask(id, { scheduledDate: newDate, status: 'pending' });
+    },
+
+    reorderTasks: async (activeId, overId) => {
         set((state) => {
-            let nextTasks = state.tasks.map(t => {
-                if (t.id === id) {
-                    return {
-                        ...t,
-                        scheduledDate: newDate,
-                        // If it was overdue, and we reschedule, reset to pending
-                        status: t.status === 'overdue' ? 'pending' : t.status,
-                        updatedAt: now
-                    };
-                }
-                return t;
-            });
-            nextTasks = taskEngine.syncState(nextTasks, now);
-            return { tasks: nextTasks };
+            const activeIndex = state.tasks.findIndex(t => t.id === activeId);
+            const overIndex = state.tasks.findIndex(t => t.id === overId);
+            if (activeIndex === -1 || overIndex === -1) return state;
+
+            const newTasks = [...state.tasks];
+            const [moved] = newTasks.splice(activeIndex, 1);
+            newTasks.splice(overIndex, 0, moved);
+
+            // Re-assign basic order indices locally
+            const updatedTasks = newTasks.map((t, index) => ({ ...t, orderIndex: index }));
+
+            // Fire async without breaking UI thread
+            apiService.updateTask(activeId, { orderIndex: overIndex });
+
+            return { tasks: updatedTasks };
         });
     }
 }));
-
-// Use Zustand subscriber to automatically handle storage synchronization purely based on task reference changes
-useTaskStore.subscribe((state, prevState) => {
-    if (state.tasks !== prevState.tasks) {
-        storageService.saveTasks(state.tasks);
-    }
-});

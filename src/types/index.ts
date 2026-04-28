@@ -20,4 +20,6 @@ export interface Task {
     completedAt?: string;
     estimatedMinutes?: number;
     notes?: string;
+    userId?: string;
+    orderIndex?: number;
 }

@@ -1,9 +1,23 @@
 import { useState } from 'react';
 import { useTaskStore } from '../store/useTaskStore';
-import { TaskCard } from '../components/TaskCard';
 import { TaskForm } from '../components/TaskForm';
 import { Plus } from 'lucide-react';
 import { format } from 'date-fns';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableTaskItem } from '../components/SortableTaskItem';
 
 export const DailyPage = () => {
     const [showForm, setShowForm] = useState(false);
@@ -15,11 +29,24 @@ export const DailyPage = () => {
 
     const dailyTasks = tasks.filter(t => t.level === 'daily' && t.scheduledDate === todayPrefix);
     const sortedTasks = [...dailyTasks].sort((a, b) => {
-        // pending first, completed last
+        // First sort by completed status
         if (a.status === 'completed' && b.status !== 'completed') return 1;
         if (a.status !== 'completed' && b.status === 'completed') return -1;
-        return 0;
+        // Then by order index
+        return (a.orderIndex || 0) - (b.orderIndex || 0);
     });
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            useTaskStore.getState().reorderTasks(active.id as string, over.id as string);
+        }
+    };
 
     return (
         <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
@@ -56,9 +83,13 @@ export const DailyPage = () => {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {sortedTasks.map(task => (
-                        <TaskCard key={task.id} task={task} />
-                    ))}
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <SortableContext items={sortedTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                            {sortedTasks.map(task => (
+                                <SortableTaskItem key={task.id} task={task} />
+                            ))}
+                        </SortableContext>
+                    </DndContext>
                 </div>
             )}
         </div>

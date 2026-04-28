@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: tasks-backend
+    env: node
+    plan: free
+    region: oregon 
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: KIMI_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production

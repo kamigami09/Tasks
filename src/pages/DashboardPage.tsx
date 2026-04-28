@@ -1,7 +1,9 @@
 import { useTaskStore } from '../store/useTaskStore';
 import { TaskCard } from '../components/TaskCard';
-import { AlertCircle, CalendarClock, Target } from 'lucide-react';
+import { AlertCircle, CalendarClock, Target, Sparkles, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { aiService } from '../services/aiService';
 
 export const DashboardPage = () => {
     const tasks = useTaskStore(state => state.tasks);
@@ -17,6 +19,46 @@ export const DashboardPage = () => {
 
     const progress = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
 
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [isThinking, setIsThinking] = useState(false);
+    const addTask = useTaskStore(state => state.addTask);
+    const kimiApiKey = useTaskStore(state => state.kimiApiKey);
+
+    // Request notification permissions on Dashboard load
+    useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }, []);
+
+    const handleMagicAdd = async () => {
+        if (!aiPrompt.trim()) return;
+
+        if (!kimiApiKey || kimiApiKey.trim() === '') {
+            alert("No API Key Provided! Please go to Settings to add your Kimi API Key.");
+            return;
+        }
+
+        setIsThinking(true);
+        try {
+            const results = await aiService.parsePromptIntoTasks(aiPrompt, kimiApiKey);
+            results.forEach(aiTask => {
+                addTask({
+                    title: aiTask.title,
+                    level: aiTask.level,
+                    description: aiTask.description,
+                    priority: 'medium',
+                    status: 'pending'
+                });
+            });
+            setAiPrompt('');
+        } catch (error) {
+            console.error('Failed to parse AI tasks', error);
+        } finally {
+            setIsThinking(false);
+        }
+    };
+
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
 
@@ -24,6 +66,31 @@ export const DashboardPage = () => {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Dashboard</h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">Here is what needs your attention.</p>
+                </div>
+            </div>
+
+            <div className="glass-card rounded-2xl p-4 shadow-sm border border-brand-200 dark:border-brand-900/50 flex flex-col md:flex-row gap-3 items-stretch animate-slide-up">
+                <div className="flex-1">
+                    <div className="flex items-center gap-1.5 text-brand-600 dark:text-brand-400 font-semibold text-sm mb-2">
+                        <Sparkles size={16} /> Autonomous AI Breakdown
+                    </div>
+                    <textarea
+                        disabled={isThinking}
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        placeholder="E.g. 'I want to build a portfolio website before Friday'..."
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none resize-none hide-scrollbar text-slate-800 dark:text-slate-200 transition-all border border-slate-200/50 dark:border-slate-800"
+                        rows={2}
+                    />
+                </div>
+                <div className="flex items-end">
+                    <button
+                        disabled={isThinking || !aiPrompt.trim()}
+                        onClick={handleMagicAdd}
+                        className="h-[52px] w-full md:w-auto px-6 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-medium shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {isThinking ? <><Loader2 size={18} className="animate-spin" /> Thinking...</> : 'Magic Add'}
+                    </button>
                 </div>
             </div>
 

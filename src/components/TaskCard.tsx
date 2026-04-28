@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Clock, Tag } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Tag, Trash2 } from 'lucide-react';
 import { Task } from '../types';
 import { useTaskStore } from '../store/useTaskStore';
 import { Badge, getStatusColors, getPriorityColors } from './Badge';
@@ -10,6 +10,7 @@ interface TaskCardProps {
 
 export const TaskCard = ({ task }: TaskCardProps) => {
     const completeTask = useTaskStore(state => state.completeTask);
+    const deleteTask = useTaskStore(state => state.deleteTask);
 
     const isCompleted = task.status === 'completed';
 
@@ -46,19 +47,29 @@ export const TaskCard = ({ task }: TaskCardProps) => {
                         </p>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-2 mt-3">
-                        <span className={`px-2 py-0.5 rounded-md text-xs font-medium flex items-center gap-1 ${getPriorityColors(task.priority)}`}>
-                            <Tag size={12} />
-                            {task.priority}
-                        </span>
-
-                        {task.scheduledDate && (
-                            <span className={`text-xs flex items-center gap-1 ${task.status === 'overdue' ? 'text-red-500 font-medium' : 'text-slate-500 dark:text-slate-400'
-                                }`}>
-                                <Clock size={12} />
-                                {task.scheduledDate}
+                    <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
+                        <div className="flex flex-wrap text-sm items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-md text-xs font-medium flex items-center gap-1 ${getPriorityColors(task.priority)}`}>
+                                <Tag size={12} />
+                                {task.priority}
                             </span>
-                        )}
+
+                            {task.scheduledDate && (
+                                <span className={`text-xs flex items-center gap-1 ${task.status === 'overdue' ? 'text-red-500 font-medium' : 'text-slate-500 dark:text-slate-400'
+                                    }`}>
+                                    <Clock size={12} />
+                                    {task.scheduledDate}
+                                </span>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={() => deleteTask(task.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            title="Delete Task"
+                        >
+                            <Trash2 size={16} />
+                        </button>
                     </div>
                 </div>
             </div>
