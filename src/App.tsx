@@ -27,7 +27,7 @@ function App() {
     }, [initialize]);
 
     return (
-        <BrowserRouter basename="/Tasks/">
+        <BrowserRouter>
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />

@@ -1,6 +1,7 @@
 import { Task } from '../types';
 
-export const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:3000/api';
+// @ts-ignore
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000/api';
 
 export const getAuthHeaders = () => {
     const token = localStorage.getItem('task_auth_token');
