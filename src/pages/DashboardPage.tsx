@@ -34,14 +34,9 @@ export const DashboardPage = () => {
     const handleMagicAdd = async () => {
         if (!aiPrompt.trim()) return;
 
-        if (!kimiApiKey || kimiApiKey.trim() === '') {
-            alert("No API Key Provided! Please go to Settings to add your Kimi API Key.");
-            return;
-        }
-
         setIsThinking(true);
         try {
-            const results = await aiService.parsePromptIntoTasks(aiPrompt, kimiApiKey);
+            const results = await aiService.parsePromptIntoTasks(aiPrompt);
             results.forEach(aiTask => {
                 addTask({
                     title: aiTask.title,
