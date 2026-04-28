@@ -10,7 +10,7 @@ export interface AITaskParseResult {
 }
 
 export const aiService = {
-    parsePromptIntoTasks: async (prompt: string, apiKey: string): Promise<AITaskParseResult[]> => {
+    parsePromptIntoTasks: async (prompt: string, apiKey?: string): Promise<AITaskParseResult[]> => {
         const response = await fetch(`${BACKEND_URL}/tasks/ai/generate`, {
             method: 'POST',
             headers: getAuthHeaders(),
