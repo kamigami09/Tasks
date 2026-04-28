@@ -22,7 +22,6 @@ export const DashboardPage = () => {
     const [aiPrompt, setAiPrompt] = useState('');
     const [isThinking, setIsThinking] = useState(false);
     const addTask = useTaskStore(state => state.addTask);
-    const kimiApiKey = useTaskStore(state => state.kimiApiKey);
 
     // Request notification permissions on Dashboard load
     useEffect(() => {
