@@ -1,0 +1,85 @@
+# Task Follow App - Production-Ready Implementation Plan
+
+## 1. Task System Design
+**Task lifecycle rules:**
+- **Daily tasks**: If not completed by end of `scheduledDate`, they become `overdue`.
+- **Overdue tasks**: Displayed in dashboard alerts; can be rescheduled or carried forward via explicit UI actions.
+- **Weekly tasks**: Can be explicitly carried over to the next week if incomplete.
+- **Monthly tasks**: Pure progress containers. Progress = % of completed children (weekly). If all children complete, parent auto-completes.
+
+**Breakdown logic (Strict Hierarchy):**
+- **Monthly** splits into **Weekly** (`parentTaskId` = monthly ID).
+- **Weekly** splits into **Daily** (`parentTaskId` = weekly ID).
+- Parents derive their completion status automatically based on children.
+
+**Time model:**
+- **Monthly**: Needs only a `dueDate` (end of month) or month identifier.
+- **Weekly**: Needs a week identifier (ISO string representation of the week).
+- **Daily**: Needs exact `scheduledDate`.
+
+## 2. Architecture & Layer Separation
+Strict isolation between layers:
+1. **UI Layer (React)**: Presentation only. Dispatches actions to Zustand.
+2. **State Layer (Zustand)**: UI binding. Triggers the Task Engine and Storage but holds minimal logic.
+3. **Task Engine Layer (`engine/taskEngine.ts`)**: Central orchestrator. Responsible for:
+   - Running overdue detection automatically
+   - Applying carry-over rules on startup
+   - Syncing parent-child progress across the hierarchy automatically
+   - Triggering on app start and upon major task updates.
+4. **Business Logic Layer (`utils/taskLogic.ts`)**: Pure testing-ready functions providing calculations for the engine to use.
+5. **Storage Layer (`services/storageService.ts`)**: Abstract wrapper for persistence.
+
+## 3. Business Logic & Task Engine (MANDATORY FUNCTIONS)
+**Task Engine (`engine/taskEngine.ts`)**:
+- `syncState(tasks)`: Runs on app start and mutations. Identifies overdue, applies carry-over, updates parent progress.
+
+**Service Functions**:
+- `createTask(taskData)`
+- `updateTask(id, modifications)`
+- `deleteTask(id)`
+- `completeTask(id)`
+- `getTasksByLevel(level)`
+- `getTasksByDate(date)`
+- `getOverdueTasks(tasks)`
+- `rescheduleTask(id, newDate)`
+- `carryOverTasks(tasks)`
+- `moveTaskToDaily(taskId)`
+- `breakTaskIntoChildren(parentId, childData[])`
+- `calculateProgress(parentId, allTasks)`
+
+## 4. Data Model Structure
+Fully normalized approach. No nested children arrays.
+```typescript
+interface Task {
+  id: string
+  title: string
+  level: "monthly" | "weekly" | "daily"
+  status: "pending" | "in_progress" | "completed" | "overdue"
+  priority: "low" | "medium" | "high"
+  dueDate?: string
+  scheduledDate?: string
+  parentTaskId?: string
+  createdAt: string
+  updatedAt: string
+  completedAt?: string
+}
+```
+
+## 5. UX Flow
+- **Landing (Dashboard)**: Heavy focus on Today's tasks. Features an overdue alert banner. Shows weekly summary. Quick Add is always visible.
+- **Weekly Flow**: Includes "Move to Today" actions for quick progression.
+- **Empty States**: Clear and inviting empty state components indicating how to begin planning if no tasks exist.
+
+## 6. PWA & Mobile Scalability
+- Base structure created with `vite-plugin-pwa` (manifest + SW support).
+- Mobile-first approach heavily utilizing Tailwind's responsive prefixes.
+- App layout features a responsive bottom navigation for mobile clients.
+- Clean separation ensures `Capacitor iOS` wrapping is effortless.
+
+## 7. Performance Choices
+- Memoized selectors in Zustand (`useStore(state => state.tasks)` with shallow comparisons).
+- Strict normalized caching (IDs instead of objects) to prevent deep re-renders when parent structures interact.
+
+## 8. Validation & Tests
+- Utilizing `zod` for strictly typing and asserting inputs during JSON import/export, and task form submissions.
+- `vitest` unit tests included for `taskService.ts` to strictly validate `breakTaskIntoChildren` and `calculateProgress`.
