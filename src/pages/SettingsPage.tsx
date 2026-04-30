@@ -45,7 +45,7 @@ export const SettingsPage = () => {
                             GitHub Copilot Token
                         </h3>
                         <p className="text-sm text-slate-500 mt-1 max-w-sm">
-                            Required to use the Autonomous AI Task Generator. Get a token from GitHub Settings -> Developer Settings.
+                            Required to use the Autonomous AI Task Generator. Get a token from GitHub Settings &gt; Developer Settings.
                         </p>
                     </div>
                     <div className="flex gap-2 w-full md:w-auto">
