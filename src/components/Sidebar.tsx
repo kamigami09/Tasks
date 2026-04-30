@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Calendar, CalendarDays, CalendarClock, Settings } from 'lucide-react';
+import { LayoutDashboard, Calendar, CalendarDays, CalendarClock, Settings, LogOut } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
 
 interface SidebarProps {
     className?: string;
@@ -7,6 +8,7 @@ interface SidebarProps {
 }
 
 export const Sidebar = ({ className = '', isMobile = false }: SidebarProps) => {
+    const { logout } = useAuthStore();
     const navItems = [
         { name: 'Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'Today', path: '/today', icon: CalendarClock },
@@ -15,7 +17,7 @@ export const Sidebar = ({ className = '', isMobile = false }: SidebarProps) => {
         { name: 'Settings', path: '/settings', icon: Settings },
     ];
 
-    const desktopClasses = `w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col p-4`;
+    const desktopClasses = `w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col p-4`;
     const mobileClasses = `flex-row justify-around items-center px-2 py-1`;
 
     return (
@@ -31,7 +33,7 @@ export const Sidebar = ({ className = '', isMobile = false }: SidebarProps) => {
                 </div>
             )}
 
-            <nav className={`flex ${isMobile ? 'w-full justify-between' : 'flex-col space-y-1'}`}>
+            <nav className={`flex ${isMobile ? 'w-full justify-between' : 'flex-col space-y-1 flex-1'}`}>
                 {navItems.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -51,6 +53,16 @@ export const Sidebar = ({ className = '', isMobile = false }: SidebarProps) => {
                     );
                 })}
             </nav>
+
+            {!isMobile && (
+                <button
+                    onClick={() => logout()}
+                    className="flex items-center gap-3 rounded-lg px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-200 mt-auto"
+                >
+                    <LogOut size={20} />
+                    <span className="text-sm font-medium">Logout</span>
+                </button>
+            )}
         </aside>
     );
 };
