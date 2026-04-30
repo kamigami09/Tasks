@@ -12,7 +12,9 @@ export const WeeklyPage = () => {
     const today = new Date();
     const currentWeekId = `${getYear(today)}-W${getISOWeek(today)}`;
 
-    const weeklyTasks = tasks.filter(t => t.level === 'weekly' && t.weekId === currentWeekId);
+    const weeklyTasks = tasks.filter(t => 
+        t.level === 'weekly' && (t.weekId === currentWeekId || !t.weekId)
+    );
     const sortedTasks = [...weeklyTasks].sort((a, b) => {
         if (a.status === 'completed' && b.status !== 'completed') return 1;
         if (a.status !== 'completed' && b.status === 'completed') return -1;

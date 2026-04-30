@@ -27,7 +27,9 @@ export const DailyPage = () => {
     const today = new Date();
     const todayPrefix = today.toISOString().split('T')[0];
 
-    const dailyTasks = tasks.filter(t => t.level === 'daily' && t.scheduledDate === todayPrefix);
+    const dailyTasks = tasks.filter(t => 
+        t.level === 'daily' && (t.scheduledDate === todayPrefix || !t.scheduledDate)
+    );
     const sortedTasks = [...dailyTasks].sort((a, b) => {
         // First sort by completed status
         if (a.status === 'completed' && b.status !== 'completed') return 1;

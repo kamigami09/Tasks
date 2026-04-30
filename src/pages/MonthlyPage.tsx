@@ -12,7 +12,9 @@ export const MonthlyPage = () => {
     const today = new Date();
     const currentMonthId = format(today, 'yyyy-MM');
 
-    const monthlyTasks = tasks.filter(t => t.level === 'monthly' && t.monthId === currentMonthId);
+    const monthlyTasks = tasks.filter(t => 
+        t.level === 'monthly' && (t.monthId === currentMonthId || !t.monthId)
+    );
 
     return (
         <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
