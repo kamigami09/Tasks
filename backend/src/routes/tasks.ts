@@ -60,4 +60,52 @@ router.delete('/:id', async (req: any, res: any) => {
     res.json({ success: true });
 });
 
+// Moonshot Kimi AI Task Breakdown Proxy
+router.post('/ai/generate', async (req: any, res: any) => {
+    const { prompt } = req.body;
+    const KIMI_API_KEY = process.env.KIMI_API_KEY;
+
+    if (!KIMI_API_KEY) return res.status(500).json({ error: 'AI Backend Key missing' });
+
+    try {
+        const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${KIMI_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'moonshot-v1-8k',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are a productivity expert. Parse the user prompt into a JSON array of tasks. 
+                        Each task MUST follow this interface:
+                        {
+                            "title": string,
+                            "level": "monthly" | "weekly" | "daily",
+                            "description": string
+                        }
+                        Break down complex goals logically. Output ONLY the JSON array.`
+                    },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.3
+            })
+        });
+
+        const data: any = await response.json();
+        const content = data.choices[0].message.content;
+        
+        // Clean markdown backticks if present
+        const jsonStr = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        const results = JSON.parse(jsonStr);
+
+        res.json(results);
+    } catch (error) {
+        console.error('AI Proxy Error:', error);
+        res.status(500).json({ error: 'AI processing failed' });
+    }
+});
+
 export default router;
