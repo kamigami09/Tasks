@@ -60,22 +60,22 @@ router.delete('/:id', async (req: any, res: any) => {
     res.json({ success: true });
 });
 
-// Moonshot Kimi AI Task Breakdown Proxy
+// GitHub Models AI Task Breakdown Proxy
 router.post('/ai/generate', async (req: any, res: any) => {
     const { prompt } = req.body;
-    const KIMI_API_KEY = process.env.KIMI_API_KEY;
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
-    if (!KIMI_API_KEY) return res.status(500).json({ error: 'AI Backend Key missing' });
+    if (!GITHUB_TOKEN) return res.status(500).json({ error: 'GitHub Token missing' });
 
     try {
-        const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+        const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${KIMI_API_KEY}`,
+                'Authorization': `Bearer ${GITHUB_TOKEN}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'moonshot-v1-8k',
+                model: 'gpt-4o',
                 messages: [
                     {
                         role: 'system',
@@ -95,16 +95,28 @@ router.post('/ai/generate', async (req: any, res: any) => {
         });
 
         const data: any = await response.json();
+        
+        if (data.error) {
+            throw new Error(data.error.message || 'GitHub AI Error');
+        }
+
         const content = data.choices[0].message.content;
         
-        // Clean markdown backticks if present
-        const jsonStr = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        // Robust extraction: Find the first '[' and last ']'
+        const start = content.indexOf('[');
+        const end = content.lastIndexOf(']');
+        
+        if (start === -1 || end === -1) {
+            throw new Error('AI failed to return a JSON array');
+        }
+
+        const jsonStr = content.substring(start, end + 1);
         const results = JSON.parse(jsonStr);
 
         res.json(results);
-    } catch (error) {
+    } catch (error: any) {
         console.error('AI Proxy Error:', error);
-        res.status(500).json({ error: 'AI processing failed' });
+        res.status(500).json({ error: error.message || 'AI processing failed' });
     }
 });
 

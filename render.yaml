@@ -12,7 +12,7 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: KIMI_API_KEY
+      - key: GITHUB_TOKEN
         sync: false
       - key: NODE_ENV
         value: production

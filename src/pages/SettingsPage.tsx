@@ -42,10 +42,10 @@ export const SettingsPage = () => {
                     <div>
                         <h3 className="font-semibold dark:text-white flex items-center gap-2">
                             <KeyRound size={18} className="text-brand-500" />
-                            Moonshot Kimi API Key
+                            GitHub Copilot Token
                         </h3>
                         <p className="text-sm text-slate-500 mt-1 max-w-sm">
-                            Required to use the Autonomous AI Task Generator. Get a key from the Moonshot Developer Platform.
+                            Required to use the Autonomous AI Task Generator. Get a token from GitHub Settings > Developer Settings.
                         </p>
                     </div>
                     <div className="flex gap-2 w-full md:w-auto">

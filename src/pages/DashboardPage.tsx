@@ -30,10 +30,13 @@ export const DashboardPage = () => {
         }
     }, []);
 
+    const [successMessage, setSuccessMessage] = useState('');
+
     const handleMagicAdd = async () => {
         if (!aiPrompt.trim()) return;
 
         setIsThinking(true);
+        setSuccessMessage('');
         try {
             const results = await aiService.parsePromptIntoTasks(aiPrompt);
             results.forEach(aiTask => {
@@ -46,6 +49,8 @@ export const DashboardPage = () => {
                 });
             });
             setAiPrompt('');
+            setSuccessMessage(`Magic! Created ${results.length} tasks. Check your Month/Week views!`);
+            setTimeout(() => setSuccessMessage(''), 5000);
         } catch (error) {
             console.error('Failed to parse AI tasks', error);
         } finally {
@@ -87,6 +92,12 @@ export const DashboardPage = () => {
                     </button>
                 </div>
             </div>
+
+            {successMessage && (
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-sm font-medium animate-bounce-subtle">
+                    {successMessage}
+                </div>
+            )}
 
             {overdueTasks.length > 0 && (
                 <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl p-4 flex items-start gap-3 shadow-sm">
